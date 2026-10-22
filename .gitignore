@@ -1,0 +1,40 @@
+# Environment files and local secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+**/*credentials*.json
+**/*secret*.json
+**/service-account*.json
+
+# User uploads and private application data
+/backend/uploads/*
+!/backend/uploads/.gitkeep
+
+# Dependencies and generated output
+node_modules/
+coverage/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local databases and runtime data
+*.sqlite
+*.sqlite3
+*.db
+
+# Editor and operating system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
