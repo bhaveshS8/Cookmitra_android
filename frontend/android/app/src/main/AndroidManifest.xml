@@ -1,0 +1,63 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Real-time booking alerts and the booking-submitted confirmation call
+         Vibration.vibrate(); without this normal permission those calls are
+         silently dropped by the platform. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Venue GPS pin (booking) and cook document capture. Requested at
+      runtime only when the feature is used; denial falls back to manual
+      entry. No background location, no broad storage access. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <application
+      android:name=".MainApplication"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:allowBackup="false"
+      android:fullBackupContent="false"
+      android:dataExtractionRules="@xml/data_extraction_rules"
+      android:theme="@style/AppTheme"
+      android:usesCleartextTraffic="false"
+      android:supportsRtl="true">
+      <activity
+        android:name=".MainActivity"
+        android:label="@string/app_name"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+        android:launchMode="singleTask"
+        android:windowSoftInputMode="adjustResize"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- cookmitra:// deep links (password reset, shared booking links). -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="cookmitra" />
+        </intent-filter>
+        <!-- The reset link the backend emails is an https:// URL, not a custom
+             scheme. Registering the reset path here lets Android offer the app
+             for that link. autoVerify is intentionally NOT set: the domain
+             cannot be claimed until /.well-known/assetlinks.json is published,
+             so this stays a user-choosable link rather than a verified one.
+             `path` (exact) rather than `pathPrefix` so look-alike paths such
+             as /reset-password-help cannot open the app; unrelated site links
+             must keep opening in the browser. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data
+                android:scheme="https"
+                android:host="cookmitra.org"
+                android:path="/reset-password" />
+        </intent-filter>
+      </activity>
+    </application>
+</manifest>

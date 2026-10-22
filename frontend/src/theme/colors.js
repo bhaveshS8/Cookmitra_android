@@ -1,0 +1,56 @@
+// Design tokens ported from website frontend/src/styles/base.css :root.
+// CookMitra brand: festive orange primary, slate neutrals, soft radii.
+export const colors = {
+  primary: '#e8590c',
+  primary700: '#c2410c',
+  primary800: '#9a3412',
+  primary100: '#ffedd5',
+  primaryLight: '#fff0e1',
+  primarySoft: '#ffe9d2',
+  slate50: '#f8fafc',
+  slate100: '#f1f5f9',
+  slate200: '#e2e8f0',
+  slate300: '#cbd5e1',
+  slate400: '#94a3b8',
+  slate500: '#64748b',
+  slate600: '#475569',
+  slate700: '#334155',
+  slate800: '#1e293b',
+  slate900: '#0f172a',
+  amber: '#d97706',
+  amberLight: '#fef3c7',
+  blue: '#2563eb',
+  blueLight: '#dbeafe',
+  emerald: '#059669',
+  emeraldLight: '#d1fae5',
+  rose: '#e11d48',
+  roseLight: '#ffe4e6',
+  purple: '#7c3aed',
+  purpleLight: '#ede9fe',
+  border: '#eef2f6',
+  background: '#faf9f7',
+  card: '#ffffff',
+  white: '#ffffff',
+  black: '#000000',
+};
+
+export const statusColors = {
+  pending: { bg: colors.amberLight, fg: '#92400e' },
+  approved: { bg: colors.blueLight, fg: '#1d4ed8' },
+  paid: { bg: colors.emeraldLight, fg: '#065f46' },
+  confirmed: { bg: colors.emeraldLight, fg: '#065f46' },
+  completed: { bg: colors.emeraldLight, fg: '#065f46' },
+  requested: { bg: colors.amberLight, fg: '#92400e' },
+  accepted: { bg: colors.blueLight, fg: '#1d4ed8' },
+  cancelled: { bg: colors.slate100, fg: colors.slate600 },
+  rejected: { bg: colors.roseLight, fg: '#9f1239' },
+  expired: { bg: colors.slate100, fg: colors.slate500 },
+  held: { bg: colors.amberLight, fg: '#92400e' },
+};
+
+export const serviceColors = {
+  cook_for_me: { bg: '#FFF7ED', fg: '#C2410C' },
+  cook_with_me: { bg: '#F0FDF4', fg: '#15803D' },
+  teach_me: { bg: '#EFF6FF', fg: '#1D4ED8' },
+  preparation_help: { bg: '#FAF5FF', fg: '#7E22CE' },
+};

@@ -1,0 +1,9 @@
+<!-- Debug-only manifest overlay: allow cleartext HTTP so the debug build can
+  reach a dev backend over LAN (e.g. http://10.0.2.2:5000 or a laptop IP).
+  Release builds do NOT merge this file and stay HTTPS-only. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools">
+    <application
+      android:usesCleartextTraffic="true"
+      tools:replace="android:usesCleartextTraffic" />
+</manifest>

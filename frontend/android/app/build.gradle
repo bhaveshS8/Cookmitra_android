@@ -1,0 +1,184 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+// react-native-config: reads mobile/.env into BuildConfig at build time.
+// Values are baked per build variant — never commit real secrets to .env.
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
+/**
+ * This is the configuration block to customize your React Native Android app.
+ * By default you don't need to apply any configuration, just uncomment the lines you need.
+ */
+react {
+    /* Folders */
+    //   The root of your project, i.e. where "package.json" lives. Default is '../..'
+    // root = file("../../")
+    //   The folder where the react-native NPM package is. Default is ../../node_modules/react-native
+    // reactNativeDir = file("../../node_modules/react-native")
+    //   The folder where the react-native Codegen package is. Default is ../../node_modules/@react-native/codegen
+    // codegenDir = file("../../node_modules/@react-native/codegen")
+    //   The cli.js file which is the React Native CLI entrypoint. Default is ../../node_modules/react-native/cli.js
+    // cliFile = file("../../node_modules/react-native/cli.js")
+
+    /* Variants */
+    //   The list of variants to that are debuggable. For those we're going to
+    //   skip the bundling of the JS bundle and the assets. Default is "debug", "debugOptimized".
+    //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
+    // debuggableVariants = ["liteDebug", "liteDebugOptimized", "prodDebug", "prodDebugOptimized"]
+
+    /* Bundling */
+    //   A list containing the node command and its flags. Default is just 'node'.
+    // nodeExecutableAndArgs = ["node"]
+    //
+    //   The command to run when bundling. By default is 'bundle'
+    // bundleCommand = "ram-bundle"
+    //
+    //   The path to the CLI configuration file. Default is empty.
+    // bundleConfig = file(../rn-cli.config.js)
+    //
+    //   The name of the generated asset file containing your JS bundle
+    // bundleAssetName = "MyApplication.android.bundle"
+    //
+    //   The entry file for bundle generation. Default is 'index.android.js' or 'index.js'
+    // entryFile = file("../js/MyApplication.android.js")
+    //
+    //   A list of extra flags to pass to the 'bundle' commands.
+    //   See https://github.com/react-native-community/cli/blob/main/docs/commands.md#bundle
+    // extraPackagerArgs = []
+
+    /* Hermes Commands */
+    //   The hermes compiler command to run. By default it is 'hermesc'
+    // hermesCommand = "$rootDir/my-custom-hermesc/bin/hermesc"
+    //
+    //   The list of flags to pass to the Hermes compiler. By default is "-O", "-output-source-map"
+    // hermesFlags = ["-O", "-output-source-map"]
+
+    /* Autolinking */
+    autolinkLibrariesWithApp()
+}
+
+/**
+ * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
+ */
+def enableProguardInReleaseBuilds = false
+
+// Production signing is opt-in. Never fall back to the debug keystore for a
+// release: a debug-signed APK cannot be upgraded in place by the Play-signed
+// app and must never be distributed. Provide all four values through Gradle
+// properties (for example -PCOOKMITRA_RELEASE_STORE_FILE=...) or environment
+// variables; with none set, `assembleRelease` produces an unsigned APK.
+def releaseStoreFile =
+    project.findProperty("COOKMITRA_RELEASE_STORE_FILE") ?: System.getenv("COOKMITRA_RELEASE_STORE_FILE")
+def releaseStorePassword =
+    project.findProperty("COOKMITRA_RELEASE_STORE_PASSWORD") ?: System.getenv("COOKMITRA_RELEASE_STORE_PASSWORD")
+def releaseKeyAlias =
+    project.findProperty("COOKMITRA_RELEASE_KEY_ALIAS") ?: System.getenv("COOKMITRA_RELEASE_KEY_ALIAS")
+def releaseKeyPassword =
+    project.findProperty("COOKMITRA_RELEASE_KEY_PASSWORD") ?: System.getenv("COOKMITRA_RELEASE_KEY_PASSWORD")
+def releaseSigningValues = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword]
+def releaseSigningProvided = releaseSigningValues.count { it != null && !it.toString().trim().isEmpty() }
+if (releaseSigningProvided > 0 && releaseSigningProvided < 4) {
+    throw new GradleException("Incomplete release signing config: set COOKMITRA_RELEASE_STORE_FILE, COOKMITRA_RELEASE_STORE_PASSWORD, COOKMITRA_RELEASE_KEY_ALIAS and COOKMITRA_RELEASE_KEY_PASSWORD.")
+}
+def hasReleaseSigning = releaseSigningProvided == 4
+if (hasReleaseSigning && !file(releaseStoreFile).exists()) {
+    throw new GradleException("COOKMITRA_RELEASE_STORE_FILE does not exist: ${releaseStoreFile}")
+}
+
+/**
+ * The preferred build flavor of JavaScriptCore (JSC)
+ *
+ * For example, to use the international variant, you can use:
+ * `def jscFlavor = io.github.react-native-community:jsc-android-intl:2026004.+`
+ *
+ * The international variant includes ICU i18n library and necessary data
+ * allowing to use e.g. `Date.toLocaleString` and `String.localeCompare` that
+ * give correct results when using with locales other than en-US. Note that
+ * this variant is about 6MiB larger per architecture than default.
+ */
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace "com.cookmitra"
+    defaultConfig {
+        applicationId "com.cookmitra"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        // Cleartext HTTP is disabled in the main manifest. The debug overlay
+        // (src/debug/AndroidManifest.xml) re-enables it only for local dev.
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // Leave unsigned when no production keystore is configured; the
+            // artifact cannot be published until the real key is supplied.
+            if (hasReleaseSigning) signingConfig signingConfigs.release
+            minifyEnabled enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+// Release builds must target the production API and must not silently bake a
+// placeholder web origin. This runs through preReleaseBuild so `assembleRelease`
+// and `bundleRelease` fail before producing an artifact with the wrong backend.
+def validateReleaseConfig = tasks.register("validateReleaseConfig") {
+    doLast {
+        def envMap = project.hasProperty("env") ? project.env : [:]
+        def api = (envMap["API_BASE_URL"] ?: "").toString().trim()
+        def web = (envMap["WEB_ORIGIN"] ?: "").toString().trim()
+        def razorpayKey = (envMap["RAZORPAY_KEY_ID"] ?: "").toString().trim()
+        def placeholderWebOrigin = "(^https?://)(localhost|127\\.0\\.0\\.1|10\\.\\d+\\.\\d+\\.\\d+|192\\.168\\.\\d+\\.\\d+|172\\.(1[6-9]|2\\d|3[01])\\.\\d+\\.\\d+|.*example\\.com|.*\\.invalid)"
+        if (api != "https://cookmitra.org/api") {
+            throw new GradleException("Release API_BASE_URL must be exactly https://cookmitra.org/api (current: '${api}').")
+        }
+        if (!web.toLowerCase().startsWith("https://") || web.length() <= 8 || web.contains(" ") || (web =~ placeholderWebOrigin)) {
+            throw new GradleException("Release WEB_ORIGIN must be a real HTTPS origin (current: '${web}').")
+        }
+        if (!razorpayKey.startsWith("rzp_live_") || razorpayKey.length() <= 9 || razorpayKey.contains(" ")) {
+            throw new GradleException("Release RAZORPAY_KEY_ID must be a live Razorpay public key (rzp_live_...). Test keys belong in debug builds.")
+        }
+    }
+}
+tasks.configureEach { task ->
+    if (task.name == "preReleaseBuild") {
+        task.dependsOn(validateReleaseConfig)
+    }
+}
+
+dependencies {
+    // The version of react-native is set by the React Native Gradle Plugin
+    implementation("com.facebook.react:react-android")
+
+    // react-native-config: exposes .env values as BuildConfig (see top of file).
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+}

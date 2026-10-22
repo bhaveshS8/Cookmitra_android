@@ -1,0 +1,314 @@
+// Ported from website frontend/src/utils/constants.js (pure parts only).
+// Web-only pieces intentionally left out: playAlarmSound (AudioContext),
+// window.location branch of bookingReviewWhatsAppUrl (see links.js).
+
+export const SERVICE_DETAILS = {
+  cook_for_me: {
+    label: 'Cook for Me',
+    description:
+      'Sit back and host your guests while our expert cook handles full meal preparation at your kitchen.',
+  },
+  cook_with_me: {
+    label: 'Cook With Me',
+    description:
+      'Team up with an experienced home chef to prepare traditional sweets and savories together.',
+  },
+  teach_me: {
+    label: 'Teach Me',
+    description:
+      'Learn time-honored techniques, family secrets, and proper consistency for intricate festive dishes.',
+  },
+  preparation_help: {
+    label: 'Preparation Help',
+    description:
+      'Get dedicated assistance with dough kneading, chakli pressing, modak shaping, and deep frying.',
+  },
+};
+
+export const formatCurrency = (amount) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
+
+export const LAUNCH_SLAB_PRICES = { 1: 199, 2: 349, 3: 499, 4: 649 };
+export const COMMISSION_RATE = 0.15;
+
+export const slabPriceForDuration = (hours) => {
+  const h = Number(hours);
+  if (!Number.isInteger(h) || LAUNCH_SLAB_PRICES[h] == null) return null;
+  return LAUNCH_SLAB_PRICES[h];
+};
+
+export const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+export const formatIsoToIstDay = (dateInput) => {
+  if (!dateInput) return '';
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+    return dateInput.trim();
+  }
+  const d = new Date(dateInput);
+  if (Number.isNaN(d.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d);
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+};
+
+export const localTodayStr = () => {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+export const localTomorrowStr = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+export const formatTime12 = (time) => {
+  const m = String(time || '').match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return String(time || '');
+  let h = Number(m[1]);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m[2]} ${ap}`;
+};
+
+export const formatTimeRange12 = (start, end, sep = '–') =>
+  start && end ? `${formatTime12(start)} ${sep} ${formatTime12(end)}` : '';
+
+export const getLocalDateStr = (isoString) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+export const dayTagLabel = (booking, today = localTodayStr()) => {
+  const day = getLocalDateStr(booking?.date);
+  if (!day || !today) return null;
+  if (day === today) return 'Today';
+  const next = new Date(`${today}T00:00:00`);
+  next.setDate(next.getDate() + 1);
+  const p = (n) => String(n).padStart(2, '0');
+  if (day === `${next.getFullYear()}-${p(next.getMonth() + 1)}-${p(next.getDate())}`) {
+    return 'Tomorrow';
+  }
+  return null;
+};
+
+export const normalizeIndianMobile = (phone) => {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
+  if (/^[6-9]\d{9}$/.test(digits)) return digits;
+  return null;
+};
+
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const istDayParts = (input) => {
+  const d = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(d.getTime())) return null;
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(d);
+    const get = (t) => parts.find((p) => p.type === t)?.value;
+    return { y: Number(get('year')), mo: Number(get('month')), d: Number(get('day')) };
+  } catch {
+    return null;
+  }
+};
+const istSlotInstant = (dateInput, hm) => {
+  const m = String(hm || '').match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const mi = Number(m[2]);
+  if (h > 23 || mi > 59) return null;
+  let y;
+  let mo;
+  let d;
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+    const dm = dateInput.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    y = Number(dm[1]);
+    mo = Number(dm[2]);
+    d = Number(dm[3]);
+  } else {
+    const p = istDayParts(dateInput);
+    if (!p || !Number.isInteger(p.y)) return null;
+    y = p.y;
+    mo = p.mo;
+    d = p.d;
+  }
+  return new Date(Date.UTC(y, mo - 1, d, h, mi) - IST_OFFSET_MS);
+};
+
+const clockHM = (d) => {
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return null;
+  return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+};
+
+export const effectiveServiceWindow = (obj) => {
+  const start = obj?.serviceStartedAt ? clockHM(obj.serviceStartedAt) : obj?.startTime || null;
+  const end = obj?.serviceEndsAt
+    ? clockHM(obj.serviceEndsAt)
+    : obj?.serviceStartedAt && obj?.durationHours
+      ? (() => {
+          const s = new Date(obj.serviceStartedAt);
+          if (Number.isNaN(s.getTime())) return obj?.endTime || null;
+          return clockHM(new Date(s.getTime() + Math.round(Number(obj.durationHours) * 60) * 60 * 1000));
+        })()
+      : obj?.endTime || null;
+  return { startTime: start, endTime: end };
+};
+
+export const sessionEndDate = (obj) => {
+  if (obj?.serviceEndsAt) {
+    const live = new Date(obj.serviceEndsAt);
+    if (!Number.isNaN(live.getTime())) return live;
+  }
+  if (obj?.sessionEnd) {
+    const resolved = new Date(obj.sessionEnd);
+    if (!Number.isNaN(resolved.getTime())) return resolved;
+  }
+  const date = obj?.date;
+  if (!date) return null;
+  const endTime = obj?.endTime;
+  if (!endTime) return null;
+  return istSlotInstant(date, endTime);
+};
+
+export const sessionStartDate = (obj) => {
+  if (obj?.serviceStartedAt) {
+    const live = new Date(obj.serviceStartedAt);
+    if (!Number.isNaN(live.getTime())) return live;
+  }
+  const date = obj?.date;
+  if (!date) return null;
+  const startTime = obj?.startTime;
+  if (!startTime) return null;
+  return istSlotInstant(date, startTime);
+};
+
+export const CANCEL_LOCK_MINUTES = 30;
+export const isCancelLocked = (obj, now = Date.now()) => {
+  const start = sessionStartDate(obj);
+  if (!start) return false;
+  return now >= start.getTime() - CANCEL_LOCK_MINUTES * 60 * 1000;
+};
+
+export const RESCHEDULE_LOCK_MINUTES = 30;
+export const RESCHEDULE_MIN_LEAD_MINUTES = 30;
+export const MAX_RESCHEDULES = 2;
+export const isRescheduleLocked = (obj, now = Date.now()) => {
+  const start = sessionStartDate(obj);
+  if (!start) return false;
+  return now >= start.getTime() - RESCHEDULE_LOCK_MINUTES * 60 * 1000;
+};
+
+export const canRescheduleBooking = (booking, user, now = Date.now()) => {
+  if (!booking) return false;
+  if (!['requested', 'accepted', 'confirmed'].includes(booking.status)) return false;
+  if (booking.serviceStartedAt || booking.cookArrived || booking.hoursCompleted) return false;
+  const role = String(user?.role || '');
+  if (role === 'admin') return true;
+  if (role !== 'customer') return false;
+  if (Number(booking.rescheduleCount || 0) >= MAX_RESCHEDULES) return false;
+  return !isRescheduleLocked(booking, now);
+};
+
+export const getBookingDisplayState = (booking, now = Date.now()) => {
+  if (!booking) return 'UNKNOWN';
+  const status = String(booking.status || '');
+  if (status === 'completed') return 'COMPLETED';
+  if (status === 'cancelled') return 'CANCELLED';
+  if (status === 'rejected') return 'REJECTED';
+  if (status === 'expired') return 'EXPIRED';
+  const end = sessionEndDate(booking);
+  if (!end) return 'UPCOMING';
+  if (now < end.getTime()) {
+    const start = sessionStartDate(booking);
+    if (start && now >= start.getTime()) return 'IN_PROGRESS';
+    return 'UPCOMING';
+  }
+  return 'OVERDUE';
+};
+
+export const isBookingOverdue = (booking, now = Date.now()) =>
+  getBookingDisplayState(booking, now) === 'OVERDUE';
+
+export const isUnpaidCancelled = (booking) =>
+  booking?.status === 'cancelled' && booking?.payment?.status !== 'paid';
+
+export const withoutUnpaidCancelled = (rows) =>
+  (rows || []).filter((b) => !isUnpaidCancelled(b));
+
+export const hasServiceHoursStarted = (obj) => {
+  if (obj?.serviceStartedAt) return true;
+  const start = sessionStartDate(obj);
+  return !!start && Date.now() >= start.getTime();
+};
+
+export const isReviewable = (booking) => {
+  if (!booking) return false;
+  if (['requested', 'rejected', 'cancelled', 'expired'].includes(booking.status)) return false;
+  if (booking.status === 'completed' || booking.hoursCompleted === true) return true;
+  const end = sessionEndDate(booking);
+  return !!end && Date.now() >= end.getTime();
+};
+
+export const formatRemaining = (endDate, now = Date.now()) => {
+  if (!endDate || Number.isNaN(endDate.getTime())) return null;
+  const diff = endDate.getTime() - now;
+  const abs = Math.abs(diff);
+  const h = Math.floor(abs / 3600000);
+  const m = Math.floor((abs % 3600000) / 60000);
+  const label = h > 0 ? `${h}h ${m}m` : `${m} min`;
+  return diff >= 0 ? `${label} left` : `Overdue by ${label}`;
+};
+
+export const distanceKm = (a, b) => {
+  if (a?.lat == null || a?.lng == null || b?.lat == null || b?.lng == null) return null;
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const s1 = Math.sin(dLat / 2);
+  const s2 = Math.sin(dLng / 2);
+  const aa =
+    s1 * s1 + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * s2 * s2;
+  return 2 * R * Math.asin(Math.sqrt(aa));
+};
+
+export const timeAgo = (iso) => {
+  if (!iso) return '';
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 10) return 'just now';
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m ago`;
+  return `${Math.floor(h / 24)}d ago`;
+};
