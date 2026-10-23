@@ -1,14 +1,15 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { Provider } from 'react-redux';
-import { store, logout, setToken } from '../src/store/store';
+import { store, logout, setToken, loginUser } from '../src/store/store';
 import { ToastProvider } from '../src/store/toast';
-import { changePassword } from '../src/api/services';
+import { changePassword, setPassword } from '../src/api/services';
 import { replaceSessionToken, clearSession } from '../src/services/session';
 import SecurityScreen from '../src/features/profile/SecurityScreen';
 
 jest.mock('../src/api/services', () => ({
   changePassword: jest.fn(),
+  setPassword: jest.fn(),
 }));
 
 jest.mock('../src/services/session', () => ({
@@ -50,6 +51,47 @@ describe('SecurityScreen', () => {
       currentPassword: 'OldPass123',
       newPassword: 'NewPass123',
     });
+    expect(goBack).toHaveBeenCalled();
+  });
+
+  test('lets a Google-only account create a password without the current one', async () => {
+    store.dispatch(
+      loginUser.fulfilled(
+        {
+          token: 'google-token',
+          user: {
+            id: 'user-google',
+            name: 'Google User',
+            role: 'customer',
+            authProvider: 'google',
+            loginMethod: 'google',
+            hasPassword: false,
+          },
+        },
+        'request-google',
+      ),
+    );
+    setPassword.mockResolvedValueOnce({
+      message: 'Password created',
+      user: { id: 'user-google', hasPassword: true, authProvider: 'local+google' },
+    });
+
+    const { goBack } = await renderSecurity();
+
+    expect(screen.queryByTestId('current-password')).toBeNull();
+    expect(screen.getByText('Create password')).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByTestId('new-password'), 'NewPass123');
+    await fireEvent.changeText(screen.getByTestId('confirm-password'), 'NewPass123');
+    await fireEvent.press(screen.getByTestId('change-password-submit'));
+
+    await waitFor(() =>
+      expect(setPassword).toHaveBeenCalledWith({ newPassword: 'NewPass123' }),
+    );
+    expect(changePassword).not.toHaveBeenCalled();
+    expect(replaceSessionToken).not.toHaveBeenCalled();
+    expect(store.getState().auth.user.hasPassword).toBe(true);
+    expect(store.getState().auth.user.authProvider).toBe('local+google');
     expect(goBack).toHaveBeenCalled();
   });
 

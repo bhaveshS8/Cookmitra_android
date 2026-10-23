@@ -5,11 +5,20 @@ const User = require("../models/User");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const findByEmailInsensitive = (email) =>
-  User.findOne({ email }, null, { collation: { locale: "en", strength: 2 } });
+const findByEmailInsensitive = (email, { withPassword = false } = {}) => {
+  const query = User.findOne({ email }, null, { collation: { locale: "en", strength: 2 } });
+  return withPassword ? query.select("+password") : query;
+};
 
 const toUserPayload = (user) => {
   if (!user) return user;
+  // `password` is select:false, so some callers (e.g. profile updates) load the
+  // user without it. The provider still tells us whether a local password must
+  // exist; never report `hasPassword:false` for a local/local+google account.
+  const hasPassword =
+    Boolean(user.password) ||
+    user.authProvider === "local" ||
+    user.authProvider === "local+google";
   return {
     id: user._id,
     name: user.name,
@@ -22,6 +31,7 @@ const toUserPayload = (user) => {
     avatar: user.avatar,
     authProvider: user.authProvider,
     loginMethod: user.authProvider || "local",
+    hasPassword,
     preferredLanguage: user.preferredLanguage || "",
     emailVerified: user.authProvider === "google" || user.authProvider === "local+google" ? true : Boolean(user.emailVerified),
     phoneVerified: Boolean(user.phoneVerified),
@@ -265,7 +275,9 @@ exports.login = async (req, res, next) => {
 
     if (!user.password && user.googleId) {
       return res.status(401).json({
-        message: "This account uses Google sign-in. Please continue with Google.",
+        message:
+          "This account was created with Google and has no password yet. Set one via 'Forgot password?' to sign in with email, or continue with Google.",
+        code: "GOOGLE_SIGN_IN_REQUIRED",
       });
     }
 
@@ -333,10 +345,10 @@ exports.googleAuth = async (req, res, next) => {
       return res.status(401).json({ message: "Google email is not verified" });
     }
 
-    let user = await User.findOne({ googleId });
+    let user = await User.findOne({ googleId }).select("+password");
     let isNewGoogleUser = false;
     if (!user) {
-      user = await findByEmailInsensitive(email);
+      user = await findByEmailInsensitive(email, { withPassword: true });
       if (user) {
         if (user.status === "suspended") {
           return res.status(403).json({
@@ -367,6 +379,11 @@ exports.googleAuth = async (req, res, next) => {
       });
     } else {
       let changed = false;
+      const provider = user.password ? "local+google" : "google";
+      if (user.authProvider !== provider) {
+        user.authProvider = provider;
+        changed = true;
+      }
       if (avatar && user.avatar !== avatar) {
         user.avatar = avatar;
         changed = true;
@@ -493,9 +510,50 @@ exports.resetPassword = async (req, res, next) => {
   }
 };
 
+// Google-created accounts have no password. Once the user has proved ownership
+// by signing in with Google, let them add a password without asking for a
+// current one. Their existing session stays valid; from then on both Google
+// and email + password work.
+exports.setPassword = async (req, res, next) => {
+  try {
+    const rawPassword =
+      req.body.newPassword ?? req.body.new_password ?? req.body.password;
+    if (typeof rawPassword !== "string") {
+      return res.status(400).json({ message: "Password must be 8–128 characters" });
+    }
+    const password = rawPassword;
+    if (password.length < 8 || password.length > 128) {
+      return res.status(400).json({ message: "Password must be 8–128 characters" });
+    }
+    const user = await User.findById(req.user.id).select("+password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.status === "suspended") {
+      return res.status(403).json({
+        message: "Your account has been blocked by an administrator. Please contact support.",
+      });
+    }
+    if (user.password) {
+      return res.status(400).json({
+        message: "This account already has a password. Use change password instead.",
+        code: "PASSWORD_ALREADY_SET",
+      });
+    }
+    user.password = password; // pre-save hook hashes it
+    user.authProvider = user.googleId ? "local+google" : "local";
+    await user.save();
+    res.json({
+      message:
+        "Password created — you can now sign in with email and password, or continue with Google.",
+      user: toUserPayload(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select("+password");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }

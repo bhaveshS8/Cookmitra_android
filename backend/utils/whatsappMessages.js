@@ -10,7 +10,6 @@
 // interactive flows should use the builders below.
 
 const { FRONTEND_BASE_URL } = require("./whatsapp");
-const { to12h, slotRange } = require("./time");
 
 const SERVICE_TYPE_MARATHI = {
   cook_for_me: "माझ्यासाठी स्वयंपाक",
@@ -91,18 +90,27 @@ const calculateMarathiWeekday = (date) => {
   return MARATHI_WEEKDAYS[parts.weekday];
 };
 
-const formatServiceDate = (booking) => {
-  try {
-    if (!booking?.date) return "";
-    return new Date(booking.date).toLocaleDateString("en-IN", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return "";
-  }
+// Marathi day-part + 12-hour clock: "10:00" -> "सकाळी 10:00",
+// "15:30" -> "दुपारी 3:30", "19:00" -> "संध्याकाळी 7:00", "21:00" -> "रात्री 9:00".
+// This is the Marathi equivalent of the English AM/PM marker.
+const toMarathiClock = (hm) => {
+  const m = String(hm || "").trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return String(hm || "");
+  const h24 = Number(m[1]);
+  const min = m[2];
+  if (!Number.isInteger(h24) || h24 < 0 || h24 > 23) return String(hm || "");
+  const dayPart =
+    h24 < 5 ? "रात्री" : h24 < 12 ? "सकाळी" : h24 < 16 ? "दुपारी" : h24 < 20 ? "संध्याकाळी" : "रात्री";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${dayPart} ${h12}:${min}`;
+};
+
+// "सकाळी 10:00 ते दुपारी 12:00" — both ends kept Marathi, never AM/PM.
+const marathiSlotRange = (start, end) => {
+  const s = start != null && String(start).trim() !== "" ? toMarathiClock(start) : "";
+  const e = end != null && String(end).trim() !== "" ? toMarathiClock(end) : "";
+  if (s && e) return `${s} ते ${e}`;
+  return s || e || "";
 };
 
 const formatClock = (value) => {
@@ -174,6 +182,26 @@ const formatPayout = (booking) => {
   return Number.isFinite(payout) ? String(Math.round(payout)) : "—";
 };
 
+// Values for the approved `new_booking_request` (mr) template, keyed by the
+// reading order used by Meta: customer, date, weekday, time, duration,
+// address. Date/weekday/clock are Marathi-rendered; the address is the
+// customer's saved text under the Marathi label.
+const buildBookingRequestTemplateParams = ({ booking, customerName } = {}) => {
+  const weekday = booking?.date ? calculateMarathiWeekday(booking.date) : "";
+  const duration =
+    booking?.durationHours != null && String(booking.durationHours).trim() !== ""
+      ? String(booking.durationHours).trim()
+      : "";
+  return {
+    customer: String(customerName || "ग्राहक").trim(),
+    date: booking?.date ? formatMarathiDate(booking.date) : "",
+    weekday: weekday === NOT_AVAILABLE ? "" : weekday,
+    time: marathiSlotRange(booking?.startTime, booking?.endTime) || "",
+    duration,
+    address: formatAddress(booking),
+  };
+};
+
 const bookingUrlFor = (bookingId) =>
   bookingId ? `${FRONTEND_BASE_URL}/bookings/${bookingId}` : "—";
 
@@ -205,11 +233,11 @@ const buildBookingRequestMessage = ({ booking, customerName } = {}) => {
   const weekday = booking?.date ? calculateMarathiWeekday(booking.date) : NOT_AVAILABLE;
   const startTime =
     booking?.startTime != null && String(booking.startTime).trim() !== ""
-      ? to12h(String(booking.startTime).trim().slice(0, 5))
+      ? toMarathiClock(String(booking.startTime).trim().slice(0, 5))
       : "";
   const endTime =
     booking?.endTime != null && String(booking.endTime).trim() !== ""
-      ? to12h(String(booking.endTime).trim().slice(0, 5))
+      ? toMarathiClock(String(booking.endTime).trim().slice(0, 5))
       : "";
   const timeLine = startTime && endTime ? `${startTime} ते ${endTime}` : NOT_AVAILABLE;
   const durationHours =
@@ -267,8 +295,22 @@ const buildBookingRequestMessage = ({ booking, customerName } = {}) => {
   ].join("\n");
 };
 
-const buildCookBookingScheduledMessage = ({ booking, cookName, customerName, bookingUrl } = {}) => {
+// Cook-facing contact line: +91 98765 43210 for Indian mobiles, raw value
+// otherwise. Empty input stays empty so callers can fall back to
+// NOT_AVAILABLE instead of printing "undefined" or a guessed number.
+const formatContactPhone = (phone) => {
+  const raw = String(phone || "").replace(/\D/g, "");
+  if (!raw) return "";
+  const last10 = raw.length > 10 ? raw.slice(-10) : raw;
+  if (last10.length === 10) {
+    return `+91 ${last10.slice(0, 5)} ${last10.slice(5)}`;
+  }
+  return String(phone).trim();
+};
+
+const buildCookBookingScheduledMessage = ({ booking, cookName, customerName, customerPhone, bookingUrl } = {}) => {
   const dirLink = mapsDirLink(booking);
+  const contact = formatContactPhone(customerPhone);
   const bookingId =
     booking?._id != null && String(booking._id).trim() !== ""
       ? String(booking._id).trim()
@@ -280,9 +322,15 @@ const buildCookBookingScheduledMessage = ({ booking, cookName, customerName, boo
     "",
     `📋 बुकिंग क्रमांक: ${bookingId || NOT_AVAILABLE}`,
     `👤 ग्राहक: ${customerName || "ग्राहक"}`,
-    `📅 तारीख: ${formatServiceDate(booking)}`,
-    `⏰ वेळ: ${slotRange(booking?.startTime, booking?.endTime) || "माहिती उपलब्ध नाही"}`,
-    `⏱️ कालावधी: ${booking?.durationHours ?? ""} तास`,
+    `📞 ग्राहक संपर्क: ${contact || NOT_AVAILABLE}`,
+    `📅 तारीख: ${booking?.date ? formatMarathiDate(booking.date) : NOT_AVAILABLE}`,
+    `📆 वार: ${booking?.date ? calculateMarathiWeekday(booking.date) : NOT_AVAILABLE}`,
+    `⏰ वेळ: ${marathiSlotRange(booking?.startTime, booking?.endTime) || NOT_AVAILABLE}`,
+    `⏱️ कालावधी: ${
+      booking?.durationHours != null && String(booking.durationHours).trim() !== ""
+        ? `${String(booking.durationHours).trim()} तास`
+        : NOT_AVAILABLE
+    }`,
     "",
     `👥 व्यक्ती: ${booking?.guests ?? ""}`,
     "",
@@ -312,9 +360,14 @@ const buildCustomerBookingConfirmedMessage = ({ booking, cookName, customerName,
     "तुमची बुकिंग यशस्वीपणे निश्चित झाली आहे.",
     "",
     `👩‍🍳 कुक: ${cookName || "नियुक्त कुक"}`,
-    `📅 तारीख: ${formatServiceDate(booking)}`,
-    `⏰ वेळ: ${slotRange(booking?.startTime, booking?.endTime) || "माहिती उपलब्ध नाही"}`,
-    `⏱️ कालावधी: ${booking?.durationHours ?? ""} तास`,
+    `📅 तारीख: ${booking?.date ? formatMarathiDate(booking.date) : NOT_AVAILABLE}`,
+    `📆 वार: ${booking?.date ? calculateMarathiWeekday(booking.date) : NOT_AVAILABLE}`,
+    `⏰ वेळ: ${marathiSlotRange(booking?.startTime, booking?.endTime) || NOT_AVAILABLE}`,
+    `⏱️ कालावधी: ${
+      booking?.durationHours != null && String(booking.durationHours).trim() !== ""
+        ? `${String(booking.durationHours).trim()} तास`
+        : NOT_AVAILABLE
+    }`,
     "",
     "🍽️ सेवा:",
     serviceTypeMarathi(booking?.serviceType),
@@ -345,7 +398,8 @@ const buildBookingExpiredMessage = ({ booking } = {}) =>
     "ही बुकिंग विनंती आता कालबाह्य झाली आहे. ⏳",
     "",
     `🍽️ सेवा: ${serviceTypeMarathi(booking?.serviceType)}`,
-    `📅 तारीख: ${formatServiceDate(booking)}`,
+    `📅 तारीख: ${booking?.date ? formatMarathiDate(booking.date) : NOT_AVAILABLE}`,
+    `📆 वार: ${booking?.date ? calculateMarathiWeekday(booking.date) : NOT_AVAILABLE}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -357,7 +411,8 @@ const buildBookingAlreadyAcceptedMessage = ({ booking } = {}) =>
     "हे बुकिंग आधीच दुसऱ्या कुकने स्वीकारले आहे. 🙏",
     "",
     `🍽️ सेवा: ${serviceTypeMarathi(booking?.serviceType)}`,
-    `📅 तारीख: ${formatServiceDate(booking)}`,
+    `📅 तारीख: ${booking?.date ? formatMarathiDate(booking.date) : NOT_AVAILABLE}`,
+    `📆 वार: ${booking?.date ? calculateMarathiWeekday(booking.date) : NOT_AVAILABLE}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -434,7 +489,8 @@ const buildBookingRejectedMessage = ({ booking } = {}) =>
     "तुम्ही ही बुकिंग विनंती नाकारली आहे.",
     "",
     `🍽️ सेवा: ${serviceTypeMarathi(booking?.serviceType)}`,
-    `📅 तारीख: ${formatServiceDate(booking)}`,
+    `📅 तारीख: ${booking?.date ? formatMarathiDate(booking.date) : NOT_AVAILABLE}`,
+    `📆 वार: ${booking?.date ? calculateMarathiWeekday(booking.date) : NOT_AVAILABLE}`,
     "",
     "इतर कुक अजूनही ही विनंती स्वीकारू शकतात.",
   ].join("\n");
@@ -452,6 +508,10 @@ module.exports = {
   NOT_AVAILABLE,
   formatMarathiDate,
   calculateMarathiWeekday,
+  toMarathiClock,
+  marathiSlotRange,
+  formatAddress,
+  buildBookingRequestTemplateParams,
   buildBookingRequestMessage,
   buildCookBookingScheduledMessage,
   buildCustomerBookingConfirmedMessage,

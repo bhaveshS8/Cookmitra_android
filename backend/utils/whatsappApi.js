@@ -1,7 +1,6 @@
 
 const {
   normalizeIndianMobile,
-  buildBookingRequestMessage,
   buildCustomerConfirmationMessage,
   buildCookJobSheetMessage,
   buildHoursCompleteMessage,
@@ -15,11 +14,11 @@ const {
   buildServiceCompletedMessage,
   bookingUrl,
 } = require("./whatsapp");
+const marathi = require("./whatsappMessages");
 const {
   buildCookCancelledMessage,
   buildCookAcceptedMessage,
-} = require("./whatsappMessages");
-const { slotRange } = require("./time");
+} = marathi;
 
 const API_VERSION = process.env.WHATSAPP_API_VERSION || "v22.0";
 
@@ -195,7 +194,7 @@ const sendCookRequestInteractive = async (cookPhone, { customerName, booking }) 
   if (!to) return { ok: false, skipped: true, reason: "invalid-recipient" };
   if (!booking?._id) return { ok: false, skipped: true, reason: "no-booking" };
   const bookingId = String(booking._id);
-  const bodyText = buildBookingRequestMessage({ customerName, booking });
+  const bodyText = marathi.buildBookingRequestMessage({ customerName, booking });
   const interactive = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
@@ -206,8 +205,8 @@ const sendCookRequestInteractive = async (cookPhone, { customerName, booking }) 
       body: { text: bodyText.slice(0, 1024) },
       action: {
         buttons: [
-          { type: "reply", reply: { id: acceptPayload(bookingId), title: "Accept ✅" } },
-          { type: "reply", reply: { id: rejectPayload(bookingId), title: "Decline ❌" } },
+          { type: "reply", reply: { id: acceptPayload(bookingId), title: marathi.ACCEPT_BUTTON_TITLE } },
+          { type: "reply", reply: { id: rejectPayload(bookingId), title: marathi.REJECT_BUTTON_TITLE } },
         ],
       },
     },
@@ -223,9 +222,15 @@ const sendCookRequestInteractive = async (cookPhone, { customerName, booking }) 
       String(
         process.env.WHATSAPP_REQUEST_TEMPLATE_LANG ||
           process.env.WHATSAPP_TEMPLATE_LANG_COOK_REQUEST ||
-          "en"
-      ).trim() || "en";
-    const dateStr = booking?.date ? new Date(booking.date).toLocaleDateString("en-IN") : "";
+          "mr"
+      ).trim() || "mr";
+    // Approved template {{1}}..{{6}} in reading order: customer, date,
+    // weekday, time-range, duration, address — all Marathi values.
+    const byName = marathi.buildBookingRequestTemplateParams({ booking, customerName });
+    const parameters = ["customer", "date", "weekday", "time", "duration", "address"].map((k) => ({
+      type: "text",
+      text: String(byName[k] ?? "").slice(0, 100) || "—",
+    }));
     const tpl = await postToMessages({
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -234,17 +239,7 @@ const sendCookRequestInteractive = async (cookPhone, { customerName, booking }) 
       template: {
         name: templateName,
         language: { code: lang },
-        components: [
-          {
-            type: "body",
-            parameters: [
-              { type: "text", text: String(customerName || "Customer").slice(0, 100) },
-              { type: "text", text: String(booking?.serviceType || "").replace(/_/g, " ").slice(0, 100) },
-              { type: "text", text: `${dateStr} ${slotRange(booking?.startTime, booking?.endTime)}`.slice(0, 100) },
-              { type: "text", text: bookingId.slice(-6) },
-            ],
-          },
-        ],
+        components: [{ type: "body", parameters }],
       },
     });
     if (tpl.ok) return tpl;
@@ -389,7 +384,7 @@ const sendBookingWhatsApp = async (event, booking, opts = {}) => {
         (async () => {
           const r = await sendCookRequestInteractive(cookPhone, { customerName, booking });
           if (r.ok) return { side: "cook", ...r };
-          const text = buildBookingRequestMessage({ customerName, booking });
+          const text = marathi.buildBookingRequestMessage({ customerName, booking });
           return { side: "cook", ...(await sendWhatsAppText(cookPhone, text)) };
         })()
       );

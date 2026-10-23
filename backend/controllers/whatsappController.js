@@ -27,7 +27,6 @@ const {
   timeToMinutes,
   intervalsOverlap,
 } = require("../utils/slots");
-const { slotRange } = require("../utils/time");
 
 const VERIFY_TOKEN = () =>
   String(
@@ -152,11 +151,6 @@ const shouldReplyUnknownSender = (senderE164) => {
   } catch {
     return true;
   }
-};
-
-const bookingLine = (booking) => {
-  const date = booking?.date ? new Date(booking.date).toLocaleDateString("en-IN") : "";
-  return `${String(booking?.serviceType || "").replace(/_/g, " ")} on ${date} ${slotRange(booking?.startTime, booking?.endTime)} (ID …${String(booking?._id || "").slice(-6)})`;
 };
 
 const reply = async (to, text) => {
@@ -394,7 +388,7 @@ const acceptViaWhatsApp = async (cook, booking, senderE164) => {
     // duplicate assignment, payment window, or notifications.
     await reply(
       senderE164,
-      [`This request is already accepted — no action needed. ✅ Accepted! ${bookingLine(fresh)}`, "", marathi.buildBookingAlreadyAcceptedMessage({ booking: fresh })].join("\n")
+      [`This request is already accepted — no action needed.`, "", marathi.buildBookingAlreadyAcceptedMessage({ booking: fresh })].join("\n")
     );
     return { ok: true, alreadyAccepted: true };
   }
@@ -403,17 +397,17 @@ const acceptViaWhatsApp = async (cook, booking, senderE164) => {
     `[whatsapp:accept] booking=${booking?._id} cook=${cook?._id} prev=${prevStatus} new=${fresh?.status} assigned=${fresh?.cook} already=${result?.alreadyAccepted === true} source=whatsapp`
   );
   // Success reply (§11): live booking data, accepted only — never claimed
-  // as payment-confirmed. English lead line kept for dashboard parity.
+  // as payment-confirmed. Entirely Marathi: no English date or AM/PM.
   const confirmLines = [
-    `✅ Accepted! ${bookingLine(fresh)}`,
-    "",
     "✅ बुकिंग स्वीकारली!",
     "",
     "ही बुकिंग तुमच्या नावावर निश्चित करण्यात आली आहे.",
     "",
+    `📋 बुकिंग क्रमांक: ${fresh?._id || "—"}`,
     `ग्राहक: ${customerName || "ग्राहक"}`,
     `तारीख: ${marathi.formatMarathiDate(fresh?.date)}`,
-    `वेळ: ${slotRange(fresh?.startTime, fresh?.endTime) || "माहिती उपलब्ध नाही"}`,
+    `वार: ${marathi.calculateMarathiWeekday(fresh?.date)}`,
+    `वेळ: ${marathi.marathiSlotRange(fresh?.startTime, fresh?.endTime) || "माहिती उपलब्ध नाही"}`,
     "",
     "कृपया Cook Mitra वेबसाइट/अॅपवर बुकिंगचे पुढील तपशील पहा.",
   ];
@@ -456,13 +450,13 @@ const rejectViaWhatsApp = async (cook, booking, senderE164) => {
   if (result?.ignored) {
     await reply(
       senderE164,
-      [`Ignored. ${bookingLine(fresh)}\nOther cooks can still accept it.`, "", marathi.buildBookingRejectedMessage({ booking: fresh })].join("\n")
+      [`Ignored.\nOther cooks can still accept it.`, "", marathi.buildBookingRejectedMessage({ booking: fresh })].join("\n")
     );
     return { ok: true, ignored: true };
   }
   await reply(
     senderE164,
-    [`Declined. ${bookingLine(fresh)}\nYour slot stays open.`, "", marathi.buildBookingRejectedMessage({ booking: fresh })].join("\n")
+    [`Declined.\nYour slot stays open.`, "", marathi.buildBookingRejectedMessage({ booking: fresh })].join("\n")
   );
   return { ok: true };
 };

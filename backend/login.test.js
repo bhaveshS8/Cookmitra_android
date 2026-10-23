@@ -34,7 +34,7 @@ const fakeQuery = (doc) => ({
 });
 const stubFindOne = (doc) => () => fakeQuery(doc);
 const stubFindOneNull = () => () => fakeQuery(null);
-const stubFindById = (doc) => () => Promise.resolve(doc);
+const stubFindById = (doc) => () => fakeQuery(doc);
 
 (async () => {
   try {
@@ -131,6 +131,7 @@ const stubFindById = (doc) => () => Promise.resolve(doc);
         check("1.6 getMe -> 200", r.statusCode === 200, `s=${r.statusCode}`);
         check("1.6 getMe carries role", r.body.role === "cook", JSON.stringify(r.body));
         check("1.6 getMe omits password", r.body.password === undefined, JSON.stringify(r.body));
+        check("1.6 getMe exposes hasPassword", r.body.hasPassword === true, JSON.stringify({ hasPassword: r.body.hasPassword }));
       } catch (e) {
         check("1.6 getMe ok", false, e.message);
       } finally {

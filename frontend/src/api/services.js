@@ -27,6 +27,7 @@ export const getMe = () => API.get('/auth/me').then((r) => r.data);
 export const getMyStats = () => API.get('/auth/me/stats').then((r) => r.data);
 export const updateMe = (data) => API.put('/auth/me', data).then((r) => r.data);
 export const changePassword = (data) => API.post('/auth/change-password', data).then((r) => r.data);
+export const setPassword = (data) => API.post('/auth/set-password', data).then((r) => r.data);
 export const getMyAddresses = () => API.get('/auth/me/addresses').then((r) => r.data);
 export const addAddress = (data) => API.post('/auth/me/addresses', data).then((r) => r.data);
 export const updateAddress = (id, data) => API.put(`/auth/me/addresses/${id}`, data).then((r) => r.data);

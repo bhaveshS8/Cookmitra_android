@@ -28,6 +28,7 @@ const LoginScreen = ({ navigation, route }) => {
   const [rememberMe, setRememberMe] = useState(true);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
+  const [googleOnly, setGoogleOnly] = useState(false);
   const dispatch = useDispatch();
   const showToast = useShowToast();
   const loading = useSelector((s) => s.auth.loading);
@@ -36,6 +37,7 @@ const LoginScreen = ({ navigation, route }) => {
   const clearFieldError = (field) => {
     setFieldErrors((p) => (p[field] ? { ...p, [field]: '' } : p));
     setError('');
+    setGoogleOnly(false);
   };
 
   const submit = async () => {
@@ -66,6 +68,7 @@ const LoginScreen = ({ navigation, route }) => {
       if (Object.keys(serverFields).length) setFieldErrors(serverFields);
       const msg = authErrorMessage(err, 'Invalid credentials. Please try again.');
       setError(msg);
+      setGoogleOnly(err?.response?.data?.code === 'GOOGLE_SIGN_IN_REQUIRED');
       showToast(msg, 'error');
     }
   };
@@ -114,6 +117,24 @@ const LoginScreen = ({ navigation, route }) => {
 
             <View style={styles.card}>
               <ErrorBanner message={error} />
+
+              {googleOnly ? (
+                <View style={styles.googleNote}>
+                  <Text style={styles.googleNoteText}>
+                    This account was created with Google. Set a password to sign in with email too.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('ForgotPassword', {
+                        email: normalizeEmail(email),
+                      })
+                    }
+                    accessibilityRole="link"
+                    hitSlop={8}>
+                    <Text style={styles.googleNoteLink}>Set a password via email</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
 
               <Field
                 label="Email address"
@@ -272,6 +293,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f6d9c2',
     borderRadius: 16,
+  },
+  googleNote: {
+    marginBottom: 14,
+    padding: 12,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: '#f6d9c2',
+    borderRadius: 12,
+  },
+  googleNoteText: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: colors.slate700,
+  },
+  googleNoteLink: {
+    marginTop: 6,
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: colors.primary700,
   },
   resumeIcon: {
     width: 38,

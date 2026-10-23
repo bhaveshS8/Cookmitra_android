@@ -52,13 +52,21 @@ const unpaid = { ...booking, payment: { status: "pending", paidAmount: 0 } };
   check("M1 missing values never borrowed", bare.includes("माहिती उपलब्ध नाही") && !bare.includes("bk-mr-001"), "nodata");
 }
 
-// ---- 2. Scheduled confirmation: ref + paid line ----
+// ---- 2. Scheduled confirmation: ref + paid line + customer contact ----
 {
-  const body = marathi.buildCookBookingScheduledMessage({ booking, cookName: "Suresh", customerName: "Aditi Rao" });
+  const body = marathi.buildCookBookingScheduledMessage({ booking, cookName: "Suresh", customerName: "Aditi Rao", customerPhone: "9123456780" });
   check("M2 scheduled has booking ref", body.includes("📋 बुकिंग क्रमांक: bk-mr-001"), "ref");
   check("M2 scheduled states paid, no double-charge", body.includes("आधीच पेमेंट केले आहे") && body.includes("पुन्हा पेमेंट घेऊ नका"), "paid");
   check("M2 scheduled names customer", body.includes("Aditi Rao") && body.includes("Suresh"), "parties");
+  check("M2 scheduled has customer contact number", body.includes("📞 ग्राहक संपर्क: +91 91234 56780"), "contact");
+  check("M2 scheduled date + weekday are Marathi", body.includes("📅 तारीख: 7 ऑक्टोबर 2026") && body.includes("📆 वार: बुधवार"), "date-day");
+  check("M2 scheduled time is Marathi (no AM/PM)", body.includes("⏰ वेळ: सकाळी 10:00 ते दुपारी 12:00") && !/AM|PM/.test(body), "time");
+  check("M2 address sits under a Marathi label", body.includes("📍 पत्ता:\nFlat 7, Sunshine Society, Pune"), "address-label");
   check("M2 scheduled is Devanagari", DEVA.test(body), "mr");
+  const noPhone = marathi.buildCookBookingScheduledMessage({ booking, cookName: "Suresh", customerName: "Aditi Rao" });
+  check("M2 missing phone shows not-available", noPhone.includes("📞 ग्राहक संपर्क: माहिती उपलब्ध नाही") && !noPhone.includes("undefined"), "no-phone");
+  const prefixed = marathi.buildCookBookingScheduledMessage({ booking, cookName: "Suresh", customerName: "Aditi Rao", customerPhone: "+91 91234 56780" });
+  check("M2 prefixed phone formats once", prefixed.includes("📞 ग्राहक संपर्क: +91 91234 56780") && !prefixed.includes("+91 +91"), "prefix");
 }
 
 // ---- 3. Cook cancellation variants ----
@@ -195,6 +203,39 @@ const unpaid = { ...booking, payment: { status: "pending", paidAmount: 0 } };
     if (oLangCook === undefined) delete process.env.WHATSAPP_TEMPLATE_LANG_COOK_REQUEST; else process.env.WHATSAPP_TEMPLATE_LANG_COOK_REQUEST = oLangCook;
     User.find = oFind2; User.findById = oFindById2; CookProfile.findOne = oFindOne;
     Booking.findById = oFindBooking; Booking.updateOne = oUpdate; global.fetch = oFetch;
+  }
+
+  // ---- 8. Immediate booking-request path uses the Marathi builder ----
+  {
+    const sent = [];
+    const oFetchReq = global.fetch;
+    global.fetch = async (url, opts) => {
+      sent.push(JSON.parse(opts.body));
+      return { ok: true, status: 200, json: async () => ({ messages: [{ id: "wamid.req" }] }) };
+    };
+    const oTplReq = process.env.WHATSAPP_REQUEST_TEMPLATE;
+    const oTplCookReq = process.env.WHATSAPP_REQUEST_TEMPLATE_FOR_COOK;
+    delete process.env.WHATSAPP_REQUEST_TEMPLATE;
+    delete process.env.WHATSAPP_REQUEST_TEMPLATE_FOR_COOK;
+    try {
+      const r = await api.sendBookingWhatsApp("request", booking, {
+        cookPhone: "9876543210",
+        customerName: "Aditi Rao",
+        customerPhone: "9123456780",
+      });
+      const interactive = sent.find((p) => p.type === "interactive");
+      const body = interactive?.interactive?.body?.text || "";
+      check("M9 request body is Marathi (date/day restored)", r?.ok === true && body.includes("📅 तारीख: 7 ऑक्टोबर 2026") && body.includes("📆 वार: बुधवार"), body.slice(0, 60));
+      check("M9 request uses Marathi day-part time", body.includes("सकाळी 10:00 ते दुपारी 12:00") && !/\b(?:AM|PM)\b/.test(body), "time");
+      check("M9 request labels are Marathi (no Venue/Date)", body.includes("📍 ठिकाण:") && !/Venue:|Date:/.test(body), "labels");
+      const buttons = interactive?.interactive?.action?.buttons || [];
+      check("M9 request buttons are Marathi", buttons.length === 2 && buttons.every((b) => DEVA.test(b.reply.title)), JSON.stringify(buttons));
+    } catch (e) { check("M9 immediate request", false, e.message); }
+    finally {
+      global.fetch = oFetchReq;
+      if (oTplReq !== undefined) process.env.WHATSAPP_REQUEST_TEMPLATE = oTplReq;
+      if (oTplCookReq !== undefined) process.env.WHATSAPP_REQUEST_TEMPLATE_FOR_COOK = oTplCookReq;
+    }
   }
 
   console.log(`\n${passes} passed, ${failures} failed`);

@@ -46,32 +46,31 @@ import { useDeviceLocation } from '../../hooks/useDeviceLocation';
 // colour so they read as die-cut holes in the card, so the two must stay in sync.
 const COUPON_BAND_BG = '#120b18';
 
-// Curated Navratri / vrat dishes only, so the strip matches the festival the
-// hero promotes. Grouped loosely as: sabudana, flours (kuttu/singhara/rajgira),
-// samak & moraiyo, farali snacks, and vrat sweets.
+// Curated Diwali faral, sweets and celebration mains, so the strip matches
+// the festival the hero promotes.
 const TICKER_DISHES = [
-  'Sabudana Khichdi',
-  'Sabudana Vada',
-  'Sabudana Thalipeeth',
-  'Sabudana Kheer',
-  'Kuttu Paratha',
-  'Kuttu Puri',
-  'Kuttu Pakora',
-  'Singhara Puri',
-  'Rajgira Paratha',
-  'Rajgira Ladoo',
-  'Samak Rice',
-  'Samak Khichdi',
-  'Moraiyo Khichdi',
-  'Farali Pattice',
-  'Farali Chivda',
-  'Vrat Ke Aloo',
-  'Ratalyacha Kees',
-  'Shakarkandi Chaat',
-  'Vrat Ki Kadhi',
-  'Makhana Kheer',
-  'Roasted Makhana',
-  'Banana Halwa',
+  'Chakli',
+  'Karanji',
+  'Shankarpali',
+  'Bhajani Chivda',
+  'Besan Ladoo',
+  'Motichoor Ladoo',
+  'Kaju Katli',
+  'Gulab Jamun',
+  'Jalebi',
+  'Soan Papdi',
+  'Dry Fruit Barfi',
+  'Mathri',
+  'Namkeen Sev',
+  'Malpua',
+  'Rabri',
+  'Basundi',
+  'Puri & Aloo Sabzi',
+  'Dal Makhani',
+  'Paneer Butter Masala',
+  'Veg Biryani',
+  'Chole Bhature',
+  'Badam Halwa',
 ];
 
 const TESTIMONIALS = [
@@ -85,17 +84,17 @@ const TESTIMONIALS = [
   },
   {
     name: 'Vikram Kulkarni',
-    role: 'Ganesh Festival in Pune',
+    role: 'Diwali Faral Party in Pune',
     quote:
-      'Booking a cook for Modaks was the best decision we made. We learned the traditional pleating technique and enjoyed fresh steamed Ukadiche Modak.',
+      'Our cook made crisp chakli, flaky karanji and rich kaju katli for our Diwali get-together. Everything tasted just like home — and my kitchen stayed spotless!',
     rating: 5,
     avatar: 'VK',
   },
   {
     name: 'Rohit & Meera Sen',
-    role: 'Navratri Feast Host',
+    role: 'Diwali Feast Host',
     quote:
-      'Finding an experienced fasting food specialist in minutes was magical. The Sabudana Khichdi and fruit salads were extraordinary!',
+      'Booking a cook for our Diwali dinner was the best decision. Dal makhani, paneer butter masala and warm gulab jamun arrived fresh — the whole family was impressed!',
     rating: 5,
     avatar: 'RS',
   },
@@ -179,8 +178,8 @@ const DishCarousel = () => {
   const index = useRef(0);
   const timer = useRef(null);
   const slides = [
-    { src: require('../../../assets/carousel-2.png'), name: 'Festive Specials' },
-    { src: require('../../../assets/carousel-3.png'), name: 'Traditional Delights' },
+    { src: require('../../../assets/carousel-2.png'), name: 'Chakli & Karanji' },
+    { src: require('../../../assets/carousel-3.png'), name: 'Kaju Katli & Sweets' },
   ];
 
   const stop = () => {
@@ -488,16 +487,16 @@ const HomeScreen = ({ navigation }) => {
 
           <View style={styles.heroPill}>
             <Sparkles size={12} color="#ea580c" />
-            <Text style={styles.heroPillText}>Navratri Special</Text>
+            <Text style={styles.heroPillText}>Diwali Special</Text>
           </View>
 
           <Text style={styles.heroTitle}>
-            Festive Feasts, <Text style={styles.heroAccent}>Cooked Fresh</Text> in Your Kitchen
+            Diwali Feasts, <Text style={styles.heroAccent}>Cooked Fresh</Text> in Your Kitchen
           </Text>
           <Text style={styles.heroSub}>
-            Celebrate Navratri with vrat-friendly feasts — sabudana khichdi, kuttu parathas, samak rice
-            &amp; more — cooked fresh in your kitchen by verified home cooks. OTP-verified starts, secure
-            UPI payments, and real-time alerts.
+            Celebrate Diwali with chakli, karanji, kaju katli &amp; a full festive spread — cooked
+            fresh in your kitchen by verified home cooks. Your first booking is free, with
+            OTP-verified starts, secure UPI payments and real-time alerts.
           </Text>
 
           <View style={styles.heroActions}>
@@ -528,8 +527,9 @@ const HomeScreen = ({ navigation }) => {
               <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none" viewBox="0 0 1 1">
                 <Defs>
                   <LinearGradient id="hero-media-frame" x1="0" y1="0" x2="1" y2="1">
-                    <Stop offset="0" stopColor="#fdba74" />
-                    <Stop offset="1" stopColor="#ea580c" />
+                    <Stop offset="0" stopColor="#fff7ed" />
+                    <Stop offset="0.55" stopColor="#fed7aa" />
+                    <Stop offset="1" stopColor="#fdba74" />
                   </LinearGradient>
                 </Defs>
                 <Rect x={0} y={0} width={1} height={1} fill="url(#hero-media-frame)" />
@@ -542,35 +542,6 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <View style={styles.proof}>
-            <View style={styles.avatars}>
-              <View style={[styles.avatarSm, styles.avatarA]}>
-                <Text style={styles.avatarSmText}>AD</Text>
-              </View>
-              <View style={[styles.avatarSm, styles.avatarB]}>
-                <Text style={styles.avatarSmText}>VK</Text>
-              </View>
-              <View style={[styles.avatarSm, styles.avatarC]}>
-                <Text style={styles.avatarSmText}>RS</Text>
-              </View>
-              <View style={styles.avatarsMore}>
-                <Text style={styles.avatarsMoreText}>+2k</Text>
-              </View>
-            </View>
-            <View style={styles.proofMeta}>
-              <View style={styles.ratingRow}>
-                <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                <Text style={styles.ratingNum}>4.9</Text>
-              </View>
-              <Text style={styles.proofText}>
-                Loved by <Text style={styles.proofStrong}>2,400+ families</Text>
-              </Text>
-            </View>
-          </View>
           <HeroStats />
         </View>
 
@@ -590,7 +561,7 @@ const HomeScreen = ({ navigation }) => {
                 {`${coupons.length} Live ${coupons.length === 1 ? 'Offer' : 'Offers'}`}
               </Text>
             </View>
-            <Text style={styles.couponTitle}>Festive Offers For You</Text>
+            <Text style={styles.couponTitle}>Diwali Offers For You</Text>
             <Text style={styles.couponSub}>
               Apply a coupon while booking — one offer per session, straight off your bill.
             </Text>
@@ -692,7 +663,7 @@ const HomeScreen = ({ navigation }) => {
                 </View>
               );
             })}
-            <Button title="Book a Festive Cook →" onPress={() => navigation.navigate('Book', { cookId: null, couponCode: null })} />
+            <Button title="Book a Diwali Cook →" onPress={() => navigation.navigate('Book', { cookId: null, couponCode: null })} />
           </View>
         ) : null}
 
@@ -704,8 +675,8 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.eyebrow}>Join Cook Mitra</Text>
             <Text style={styles.sectionTitleLeft}>Create Your Account</Text>
             <Text style={styles.sectionDescLeft}>
-              Sign up to book verified festive cooks, manage your reservations, and bring authentic
-              festival flavors to your home.
+              Sign up to book verified home cooks, manage your reservations, and bring the true taste
+              of Diwali to your home.
             </Text>
             {[
               'Book verified cooks in your area',
@@ -740,7 +711,7 @@ const HomeScreen = ({ navigation }) => {
           </View>
           <Text style={styles.howHeading}>How Cook Mitra Works</Text>
           <Text style={styles.howSub}>
-            Bring the joy of authentic festive cooking to your home in four simple steps.
+            Bring the joy of Diwali cooking home in four simple steps.
           </Text>
           <View style={styles.howSteps}>
             {HOW_STEPS.map((s, i) => {
@@ -769,9 +740,9 @@ const HomeScreen = ({ navigation }) => {
         {/* Testimonials — mirrors website .band-abyss */}
         <View style={styles.testiBand}>
           <Text style={[styles.eyebrowCenter, styles.eyebrowDark]}>Customer Stories</Text>
-          <Text style={[styles.sectionTitle, styles.darkTitle]}>Loved by Festival Hosts</Text>
+          <Text style={[styles.sectionTitle, styles.darkTitle]}>Loved by Diwali Hosts</Text>
           <Text style={[styles.sectionDesc, styles.darkSub]}>
-            Read how Cook Mitra brought authentic celebrations into modern homes.
+            Read how Cook Mitra brought the light and warmth of Diwali into modern homes.
           </Text>
           {TESTIMONIALS.map((t) => (
             <View key={t.name} style={styles.testiCard}>
@@ -799,15 +770,15 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.cookCta}>
             <View style={styles.cookBadge}>
               <ChefHat size={14} color={colors.white} />
-              <Text style={styles.cookBadgeText}>For Home Chefs · Earn Festive Income</Text>
+              <Text style={styles.cookBadgeText}>For Home Chefs · Earn This Diwali</Text>
             </View>
             <Text style={styles.cookTitle}>Are You a Skilled Home Cook?</Text>
             <Text style={styles.cookSub}>
-              Turn your family recipes into festive earnings. Share your traditional culinary recipes
-              and cooking skills with families in your city — on flexible slots, with a verified profile.
+              Turn your family recipes into Diwali earnings. Share your traditional faral and Diwali
+              sweets with families in your city — on flexible slots, with a verified profile.
             </Text>
             {[
-              { icon: ChefHat, t: 'Share recipes', s: 'Traditional festive dishes' },
+              { icon: ChefHat, t: 'Share recipes', s: 'Diwali faral & sweets' },
               { icon: CalendarClock, t: 'Flexible slots', s: 'You choose timings' },
               { icon: ShieldCheck, t: 'Verified profile', s: 'Build trust & reviews' },
             ].map((p) => {
@@ -838,7 +809,7 @@ const HomeScreen = ({ navigation }) => {
                 />
               </View>
             ) : null}
-            <Text style={styles.cookNote}>No joining fee · Festive demand in Pune</Text>
+            <Text style={styles.cookNote}>No joining fee · Diwali demand in Pune</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -910,14 +881,22 @@ const styles = StyleSheet.create({
   // when the same view also has overflow hidden (needed to round the frame).
   heroMedia: {
     marginTop: 16,
-    shadowColor: '#c2410c',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    elevation: 6,
+    shadowColor: '#7c2d12',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 5,
   },
-  heroImgWrap: { borderRadius: 22, padding: 5, overflow: 'hidden', backgroundColor: '#f97316' },
-  heroImg: { width: '100%', height: 224, borderRadius: 17 },
+  // Thin warm gradient ring (SVG behind) + hairline edge for a clean, modern frame.
+  heroImgWrap: {
+    borderRadius: 24,
+    padding: 3,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(28,14,5,0.06)',
+  },
+  heroImg: { width: '100%', height: 224, borderRadius: 20 },
   heroMediaBadge: {
     position: 'absolute',
     bottom: 14,
@@ -933,35 +912,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   heroMediaBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.2 },
-  proof: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 16,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(253,233,200,0.95)',
-    borderRadius: 18,
-    padding: 12,
-    shadowColor: '#c2410c',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  avatars: { flexDirection: 'row', alignItems: 'center' },
-  avatarSm: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
-  avatarA: { backgroundColor: '#f97316' },
-  avatarB: { backgroundColor: '#8b5cf6', marginLeft: -10 },
-  avatarC: { backgroundColor: '#059669', marginLeft: -10 },
-  avatarSmText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  avatarsMore: { marginLeft: -10, backgroundColor: '#FEF3C7', borderRadius: 99, paddingHorizontal: 8, height: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
-  avatarsMoreText: { fontSize: 11, fontWeight: '800', color: '#7C2D12' },
-  proofMeta: { flex: 1, flexShrink: 1, gap: 3 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  ratingNum: { fontWeight: '800', color: '#C2410C', marginLeft: 4, fontSize: 13 },
-  proofText: { fontSize: 13, color: '#7C2D12' },
-  proofStrong: { color: '#C2410C', fontWeight: '800' },
   heroStats: { flexDirection: 'row', gap: 10, marginTop: 12 },
   heroStat: {
     flex: 1,

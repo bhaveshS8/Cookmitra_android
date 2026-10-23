@@ -145,7 +145,7 @@ const textsTo = (e164) => sent.filter((s) => s.to === e164 && s.type === "text")
       check("ACCEPT tap -> 200 handled", r.statusCode === 200 && r.body?.handled === 1, JSON.stringify(r.body));
       check("ACCEPT tap flips booking", claimed && doc.status === "accepted", doc.status);
       check("customer notified accepted", notifs.some((n) => n.type === "booking_accepted"), notifs.map((n) => n.type).join(","));
-      check("cook gets confirmation", /Accepted/.test(cookTexts), cookTexts.slice(0, 60));
+      check("cook gets Marathi confirmation (no English date/AM-PM)", /बुकिंग स्वीकारली/.test(cookTexts) && !/\b(?:AM|PM)\b/.test(cookTexts), cookTexts.slice(0, 60));
     }
 
     {

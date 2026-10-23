@@ -1,15 +1,16 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { Provider } from 'react-redux';
-import { store } from '../src/store/store';
+import { store, logout } from '../src/store/store';
 import { ToastProvider } from '../src/store/toast';
+import API from '../src/api/client';
 import LoginScreen from '../src/features/auth/LoginScreen';
 
-const renderLogin = async (params = {}) => {
+const renderLogin = async (params = {}, navigation = { navigate: jest.fn() }) => {
   await render(
     <Provider store={store}>
       <ToastProvider>
-        <LoginScreen navigation={{ navigate: jest.fn() }} route={{ params }} />
+        <LoginScreen navigation={navigation} route={{ params }} />
       </ToastProvider>
     </Provider>,
   );
@@ -17,6 +18,11 @@ const renderLogin = async (params = {}) => {
 };
 
 describe('LoginScreen', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    store.dispatch(logout());
+  });
+
   test('renders email + password fields and submit', async () => {
     const s = await renderLogin();
     expect(s.getByPlaceholderText('name@example.com')).toBeTruthy();
@@ -42,5 +48,32 @@ describe('LoginScreen', () => {
   test('booking-resume note appears with next param', async () => {
     const s = await renderLogin({ next: 'Book' });
     expect(s.getByText(/pick up right where you left off/)).toBeTruthy();
+  });
+
+  test('Google-only account gets a link to set a password by email', async () => {
+    const navigation = { navigate: jest.fn() };
+    jest.spyOn(API, 'post').mockRejectedValueOnce({
+      response: {
+        status: 401,
+        data: {
+          message:
+            "This account uses Google sign-in. Continue with Google, or set a password via 'Forgot password?' to sign in with email.",
+          code: 'GOOGLE_SIGN_IN_REQUIRED',
+        },
+      },
+    });
+
+    const s = await renderLogin({}, navigation);
+    await fireEvent.changeText(s.getByPlaceholderText('name@example.com'), 'Person@Example.com ');
+    await fireEvent.changeText(s.getByPlaceholderText('Enter your password'), 'anything123');
+    await fireEvent.press(s.getByTestId('login-submit'));
+
+    await waitFor(() => expect(s.getByText('Set a password via email')).toBeTruthy());
+    expect(s.getByText(/This account was created with Google/)).toBeTruthy();
+
+    await fireEvent.press(s.getByText('Set a password via email'));
+    expect(navigation.navigate).toHaveBeenCalledWith('ForgotPassword', {
+      email: 'person@example.com',
+    });
   });
 });
